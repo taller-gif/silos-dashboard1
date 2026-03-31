@@ -1,83 +1,30 @@
-// MQTT
-const client = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
+function actualizar(topic, valor) {
 
-const topics = [
-    "silos/esp32/reading1",
-    "silos/esp32/reading2",
-    "silos/esp32/reading3",
-    "silos/esp32/reading4"
-];
+    // 🔧 Ajuste de rango (ejemplo: 0 a 100 toneladas)
+    valor = Math.max(0, Math.min(100, valor));
 
-// Sonido
-const alarma = new Audio("https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg");
+    let id = "";
 
-// Crear gauges
-function crearGauge(id){
-    return new Chart(document.getElementById(id), {
-        type: 'doughnut',
-        data: {
-            datasets: [{
-                data: [0, 100],
-                backgroundColor: ['lime', '#333'],
-                borderWidth: 0
-            }]
-        },
-        options: {
-            cutout: '70%',
-            plugins: { legend: { display: false } },
-        }
-    });
-}
+    if (topic === "silos/esp32/reading1") id = "c1";
+    if (topic === "silos/esp32/reading2") id = "c2";
+    if (topic === "silos/esp32/reading3") id = "c3";
+    if (topic === "silos/esp32/reading4") id = "c4";
 
-let g1 = crearGauge("g1");
-let g2 = crearGauge("g2");
-let g3 = crearGauge("g3");
-let g4 = crearGauge("g4");
+    const el = document.getElementById(id);
 
-// Conexión
-client.on('connect', () => {
-    console.log("✅ MQTT conectado");
-    topics.forEach(t => client.subscribe(t));
-});
+    // 🎨 COLOR SEGÚN NIVEL
+    let color = "red";
 
-// Mensajes
-client.on('message', (topic, message) => {
-
-    let value = parseFloat(message.toString());
-
-    if(isNaN(value)) return;
-
-    value = Math.max(0, Math.min(100, value));
-
-    if(topic.includes("reading1")) actualizar(g1, "t1", value);
-    if(topic.includes("reading2")) actualizar(g2, "t2", value);
-    if(topic.includes("reading3")) actualizar(g3, "t3", value);
-    if(topic.includes("reading4")) actualizar(g4, "t4", value);
-});
-
-// Actualizar gauge
-function actualizar(gauge, textId, value){
-
-    let color = "lime";
-
-    if(value < 30){
-        color = "red";
-        activarAlarma();
-    }
-    else if(value < 70){
-        color = "orange";
+    if (valor >= 20) {
+        color = "#22c55e"; // verde
     }
 
-    gauge.data.datasets[0].data = [value, 100 - value];
-    gauge.data.datasets[0].backgroundColor = [color, '#333'];
-    gauge.update();
+    // 📊 PROGRESO (si 100 tn = lleno)
+    let porcentaje = valor; 
 
-    document.getElementById(textId).innerText = value + "%";
-}
+    el.style.background =
+        `conic-gradient(${color} ${porcentaje}%, #0f172a ${porcentaje}%)`;
 
-// Alarma
-function activarAlarma(){
-    if(alarma.paused){
-        alarma.play();
-    }
+    // 🧮 ACTUALIZAR TEXTO
+    el.querySelector(".valor").innerText = Math.round(valor);
 }

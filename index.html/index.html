@@ -1,45 +1,180 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Monitoreo de Silos</title>
+<title>Silos</title>
 
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<link rel="stylesheet" href="style.css">
+<style>
+body {
+    background: #0f172a;
+    color: white;
+    font-family: Arial;
+    text-align: center;
+}
+
+.container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.silo {
+    background: #1e293b;
+    padding: 15px;
+    border-radius: 15px;
+}
+
+/* 🔥 SEMI CÍRCULO */
+.gauge {
+    width: 140px;
+    height: 70px;
+    margin: auto;
+    position: relative;
+    overflow: hidden;
+}
+
+.gauge-fill {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: conic-gradient(red 0deg, #0f172a 0deg);
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.gauge-cover {
+    width: 120px;
+    height: 60px;
+    background: #1e293b;
+    border-radius: 60px 60px 0 0;
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.valor {
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.unidad {
+    font-size: 12px;
+    opacity: 0.7;
+}
+</style>
 </head>
 
 <body>
 
-<h1>MONITOREO DE SILOS</h1>
+<h2>📊 Silos en Toneladas</h2>
 
 <div class="container">
 
-    <div class="gauge">
-        <canvas id="g1"></canvas>
-        <p>Silo 1: <span id="t1">0%</span></p>
+    <div class="silo">
+        <h3>Nivel 1</h3>
+        <div class="gauge">
+            <div class="gauge-fill" id="c1"></div>
+            <div class="gauge-cover">
+                <div class="valor" id="v1">0</div>
+                <div class="unidad">tn</div>
+            </div>
+        </div>
     </div>
 
-    <div class="gauge">
-        <canvas id="g2"></canvas>
-        <p>Silo 2: <span id="t2">0%</span></p>
+    <div class="silo">
+        <h3>Nivel 2</h3>
+        <div class="gauge">
+            <div class="gauge-fill" id="c2"></div>
+            <div class="gauge-cover">
+                <div class="valor" id="v2">0</div>
+                <div class="unidad">tn</div>
+            </div>
+        </div>
     </div>
 
-    <div class="gauge">
-        <canvas id="g3"></canvas>
-        <p>Silo 3: <span id="t3">0%</span></p>
+    <div class="silo">
+        <h3>Nivel 3</h3>
+        <div class="gauge">
+            <div class="gauge-fill" id="c3"></div>
+            <div class="gauge-cover">
+                <div class="valor" id="v3">0</div>
+                <div class="unidad">tn</div>
+            </div>
+        </div>
     </div>
 
-    <div class="gauge">
-        <canvas id="g4"></canvas>
-        <p>Silo 4: <span id="t4">0%</span></p>
+    <div class="silo">
+        <h3>Nivel 4</h3>
+        <div class="gauge">
+            <div class="gauge-fill" id="c4"></div>
+            <div class="gauge-cover">
+                <div class="valor" id="v4">0</div>
+                <div class="unidad">tn</div>
+            </div>
+        </div>
     </div>
 
 </div>
 
-<script src="app.js"></script>
+<script>
+
+// 🔌 MQTT
+const client = mqtt.connect("wss://broker.emqx.io:8084/mqtt");
+
+client.on("connect", () => {
+    console.log("✅ Conectado");
+
+    client.subscribe("silos/esp32/reading1");
+    client.subscribe("silos/esp32/reading2");
+    client.subscribe("silos/esp32/reading3");
+    client.subscribe("silos/esp32/reading4");
+});
+
+client.on("message", (topic, message) => {
+    let valor = parseFloat(message.toString());
+    actualizar(topic, valor);
+});
+
+// 🎯 ACTUALIZACIÓN
+function actualizar(topic, valor) {
+
+    // 🔧 AJUSTÁ ESTO A TU SILO REAL
+    let maxTon = 100;
+
+    let porcentaje = (valor / maxTon) * 180; // 180° semicirculo
+
+    let id = "";
+    let vid = "";
+
+    if (topic === "silos/esp32/reading1") { id="c1"; vid="v1"; }
+    if (topic === "silos/esp32/reading2") { id="c2"; vid="v2"; }
+    if (topic === "silos/esp32/reading3") { id="c3"; vid="v3"; }
+    if (topic === "silos/esp32/reading4") { id="c4"; vid="v4"; }
+
+    // 🎨 COLOR DINÁMICO
+    let color = "red";
+
+    if (valor >= 20) {
+        color = "#22c55e"; // verde
+    }
+
+    // 🔵 ACTUALIZAR GRÁFICO
+    document.getElementById(id).style.background =
+        `conic-gradient(${color} ${porcentaje}deg, #0f172a ${porcentaje}deg)`;
+
+    // 🔢 ACTUALIZAR TEXTO
+    document.getElementById(vid).innerText = Math.round(valor);
+}
+
+</script>
 
 </body>
 </html>
